@@ -23,9 +23,9 @@ def moment(qc, L, J, g, eigenvalues_sort, k, c1, c2, depolar=1e-3, shots=1e3, ps
     print("dt: ", dt)
     print("nsteps: ", nsteps)
     rqc_layers = 7
-    if t < 0.1:
+    if dt < 0.1:
         rqc_layers = 3
-    elif t < 1:
+    elif dt < 0.5:
         rqc_layers = 5
     
 
