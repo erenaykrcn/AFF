@@ -14,8 +14,12 @@ sys.path.append("../rqcopt")
 from optimize import ising1d_dynamics_opt
 
 
-def estimate_phases(L, J, g, prepared_state, eigenvalues_sort, tau, N, shots, depolarizing_error, c2=0, rqc=True, 
-    coeffs=None, rqc_layers=5, reuse_RQC=0, nsteps=1, hamil=None, control=False):
+def estimate_phases(L, J, g, prepared_state, eigenvalues_sort, tau, N, 
+    shots, depolarizing_error, c2=0, rqc=True, 
+    coeffs=None, rqc_layers=5, reuse_RQC=0, nsteps=1, 
+    hamil=None, control=False, beta=None,
+    trotterized_time_evolution=None, pi=None, lamb=None, h=None
+    ):
     backend = qiskit.Aer.get_backend("aer_simulator")
     x1_error = errors.depolarizing_error(depolarizing_error*0.1, 1)
     x2_error = errors.depolarizing_error(depolarizing_error, 2)
@@ -76,13 +80,33 @@ def estimate_phases(L, J, g, prepared_state, eigenvalues_sort, tau, N, shots, de
                     qc_cU_ins.cz(L, j)
             qc_cU_ins.x(L)
             if c2 !=  0:
-                # This makes sign wring sometimes! Fix IT!
+                # This makes sign wrong sometimes! Fix IT!
                 # Make qc_cU_ins shifted!!
                 qc_cU_ins.cp(-c2, L, 0)
                 qc_cU_ins.x(0)
                 qc_cU_ins.cp(-c2, L, 0)
                 qc_cU_ins.x(0)
             qc_cU = qc_cU_ins
+        elif trotterized_time_evolution is not None:
+            t = 2*nsteps * t
+            print("t: ", t)
+            qc_U = trotterized_time_evolution(J, h, pi, lamb, beta, t, L)
+            if c2 !=  0:
+                qc_U.p(-c2, 0)
+                qc_U.x(0)
+                qc_U.p(-c2, 0)
+                qc_U.x(0)
+
+            if hamil is not None and c2==0:
+                backend2 = Aer.get_backend("unitary_simulator")
+                qc_unit = execute(transpile(qc_U), backend2).result().get_unitary(qc_U, L).data
+                U = scipy.linalg.expm(-1j * t * hamil)
+                print("U Error: ", np.linalg.norm(qc_unit-U, ord=2))
+                #qc_U = qiskit.QuantumCircuit(L)
+                #qc_U.unitary(U, [i for i in range(L)])
+
+            qc_cU = qiskit.QuantumCircuit(L+1)
+            qc_cU.append(qc_U.to_gate().control(), [L] + [i for i in range(L)])
         else:
             nsteps = 1
             if t > 1:

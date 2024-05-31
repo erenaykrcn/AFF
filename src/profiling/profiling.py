@@ -8,7 +8,11 @@ import numpy as np
 def exact_moment(psi, hamil, k):
     return np.vdot(psi, scipy.linalg.expm(-1j * k * hamil) @ psi)
 
-def moment(qc, L, J, g, eigenvalues_sort, k, c1, c2, depolar=1e-3, shots=1e3, psi=None):
+def moment(qc, L, J, g, eigenvalues_sort, k, c1, c2, 
+    depolar=1e-3, shots=1e3, psi=None,
+    trotterized_time_evolution=None,
+    pi=None, lamb=None, h=None, hamil=None, beta=None
+    ):
     t = c1 * k/2
     dt = t/np.ceil(t)
     nsteps = int(np.ceil(t))
@@ -31,7 +35,10 @@ def moment(qc, L, J, g, eigenvalues_sort, k, c1, c2, depolar=1e-3, shots=1e3, ps
 
     ret = estimate_phases(L, J, g, qc, eigenvalues_sort, dt, 2,
                             shots, depolar, rqc_layers=rqc_layers,
-                           rqc=True, nsteps=nsteps, c2=c2, reuse_RQC=L-4
+                            rqc=trotterized_time_evolution is None, 
+                            nsteps=nsteps, c2=c2, reuse_RQC=L-4,
+                            trotterized_time_evolution=trotterized_time_evolution, 
+                            pi=pi, lamb=lamb, h=h, hamil=hamil, beta=beta
                           )
     return ret[0][0][1]
 
